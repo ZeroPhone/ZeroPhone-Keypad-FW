@@ -2,29 +2,29 @@
 #include <Wire.h>
 
 #define address 0x12
-#define int_pin 13
+#define int_pin A3
 
 const byte ROWS = 6; //four rows
 const byte COLS = 5; //three columns
 uint8_t keys[ROWS][COLS] = {
-  //{'1','2','3','A','M'},
-  {18,1,17,25,26},
-  //{'4','5','6','B','N'},
-  {20,3,4,30,19},
-  //{'7','8','9','C','O'},
-  {7,22,2,21,5},
-  //{'*','0','#','D','P'},
-  {10,9,6,12,8},
-  //{'E','I','F','J','Q'},
-  {29,13,11,14,27},
-  //{'G','K','H','L','R'}
-  {28,24,16,15,23}
+  //{'VOL_DW','VOL_UP','F1',   'UP',   'F2'},
+    { 26,      25,      17,     1,      18},
+  //{'HNG',   'LEFT',  'ENTER','RIGHT','ANS'},
+    { 19,      30,      4,      3,      20},
+  //{'1',     'PGU',   'DOWN', 'PGD',  '3'},
+    { 5,       21,      2,      22,     7},
+  //{'4',     '8',     '2',    '5',    '6'},
+    { 8,       12,      6,      9,      10},
+  //{'P1',    '*',     '7',    '9',    'CAM'},
+    { 27,     14,       11,     13,     29},
+  //{'F5',    '0',     '#',    'F6',   'P2'}
+    { 23,      15,      16,     24,     28}
 };
 
 uint8_t pressed_key;
 
-byte rowPins[ROWS] = {A0, A1, A2, A3, 11, 12}; 
-byte colPins[COLS] = {2, 3, 4, 5, 7}; 
+byte rowPins[ROWS] = {8, 7, 6, 4, 3, 2}; 
+byte colPins[COLS] = {12, 13, A0, A1, A2}; 
 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
@@ -47,7 +47,7 @@ void loop(){
   uint8_t key = keypad.getKey();
   if (key){
     pressed_key = key;
-    //Serial.println(key);
+    Serial.println(key);
     digitalWrite(int_pin, LOW);
   }
 }
