@@ -1,0 +1,12 @@
+This is what's planned for the I2C registers of the ATMega, it's not yet implemented and likely is going to change.
+
+ATMega I2C registers
+	0x00 - firmware version register (for backwards compatibility)
+	0x01 - last key pressed (is cleared once its contents are requested)
+	0x02 - ADC0 high value (battery voltage) (internal 1.1V measured against VBAT)
+	0x03 - ADC0 low value
+	0x04 - ADC1 high value (user-accessible ADC)
+	0x05 - ADC1 low value
+	0x06 - keypad PWM
+	0x07 - vibromotor PWM
+	0x08 - one GPIO is accessible, put its configuration/state there? Also, the GPIO has PWM capability - additional registers?
