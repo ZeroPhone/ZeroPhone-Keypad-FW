@@ -4,8 +4,8 @@
 #define address 0x12
 #define int_pin A3
 
-const byte ROWS = 6; //four rows
-const byte COLS = 5; //three columns
+const byte ROWS = 6; 
+const byte COLS = 5; 
 uint8_t keys[COLS][ROWS] = {
   //{'VOL_DW','ANSWER', '1',    '4',   'PROG1',  'F5'},
     { 27,      20,      6,      9,     28,       24},
@@ -34,7 +34,7 @@ void sendKey() {
 
 void setup(){
   Serial.begin(115200);
-  Serial.write('a'); //TXD/RXD testing
+  Serial.write('a'); //TXD testing
   pinMode(int_pin, OUTPUT);
   digitalWrite(int_pin, HIGH);
   Wire.begin(address); 
