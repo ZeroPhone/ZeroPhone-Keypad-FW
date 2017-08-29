@@ -6,19 +6,17 @@
 
 const byte ROWS = 6; //four rows
 const byte COLS = 5; //three columns
-uint8_t keys[ROWS][COLS] = {
-  //{'VOL_DW','VOL_UP','F1',   'UP',   'F2'},
-    { 27,      26,      18,     2,      19},
-  //{'ANSWER','LEFT',  'ENTER','RIGHT','HANGUP'},
-    { 20,      1,       5,      4,      21},
-  //{'1',     'F3',   'DOWN',  'F4',   '3'},
-    { 6,       22,      3,      23,     8},
-  //{'4',     '8',     '2',    '5',    '6'},
-    { 9,       13,      7,      10,     11},
-  //{'PROG1', '*',     '7',    '9',    'CAMERA'},
-    { 28,     15,       12,     14,     30},
-  //{'F5',    '0',     '#',    'F6',   'PROG2'}
-    { 24,      16,      17,     25,     29}
+uint8_t keys[COLS][ROWS] = {
+  //{'VOL_DW','ANSWER', '1',    '4',   'PROG1',  'F5'},
+    { 27,      20,      6,      9,     28,       24},
+  //{'VOL_UP','LEFT',   'F3',   '8',   '*',      '0'},
+    { 26,      1,       22,     13,    15,       16},
+  //{'F1',    'ENTER',  'DOWN', '2',   '7'       '#'},
+    { 18,      5,       3,      7,     12,       17 },
+  //{'UP',    'RIGHT',  'F4',   '5',   '9'       'F6'},
+    { 2,       4,       23,     10,    14,        25},
+  //{'F2',    'HANGUP', '3',    '6',   'CAMERA', 'PROG2'},
+    { 19,     21,       8,      11,    30,        29}
 };
 
 uint8_t pressed_key;
@@ -26,7 +24,7 @@ uint8_t pressed_key;
 byte rowPins[ROWS] = {8, 7, 6, 4, 3, 2}; 
 byte colPins[COLS] = {12, 13, A0, A1, A2}; 
 
-Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+Keypad keypad = Keypad( makeKeymap(keys), colPins, rowPins, COLS, ROWS );
 
 void sendKey() {
   Wire.write(pressed_key);
