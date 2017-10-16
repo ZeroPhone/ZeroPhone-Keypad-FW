@@ -1,6 +1,7 @@
 #include <Keypad.h>
 #include <Wire.h>
 
+#define version 0x03
 #define address 0x12
 #define int_pin A3
 
