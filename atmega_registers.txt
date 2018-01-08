@@ -1,12 +1,70 @@
-This is what's planned for the I2C registers of the ATMega, it's not yet implemented and likely is going to change.
+ATMega firmware specification proposition
+
+ Raspberry Pi has clock stretching problems
+	Those never surface with current firmware
+	Possible solutions to make sure it never appears:
+		Returning an I2C response as soon as possible:
+			Caching data?
+			Processing as much as possible in the main loop?
 
 ATMega I2C registers
-	0x00 - firmware version register (for backwards compatibility)
-	0x01 - last key pressed (is cleared once its contents are requested)
-	0x02 - ADC0 high value (battery voltage) (internal 1.1V measured against VBAT)
-	0x03 - ADC0 low value
-	0x04 - ADC1 high value (user-accessible ADC)
-	0x05 - ADC1 low value
-	0x06 - keypad PWM
-	0x07 - vibromotor PWM
-	0x08 - one GPIO is accessible, put its configuration/state there? Also, the GPIO has PWM capability - additional registers?
+	* 0x00 - firmware version register (for compatibility)
+	* 0x01 - last key pressed (is cleared once its contents are requested)
+	* 0x02 - last key state (just pressed/held/just released)
+	* 0x03 - enable bits
+	  0x04 - enable bits (reserved for future use)
+	* 0x05 - firmware loop counter (for debugging)
+	  0x06 - ADC0 high value (battery voltage) (internal 1.1V measured against VBAT)
+	  0x07 - ADC0 low value
+	  0x08 - ADC1 high value (user-accessible ADC)
+	  0x09 - ADC1 low value
+	  0x10 - keypad backlight PWM
+	* 0x11 - vibromotor PWM
+	c 0x12 - PD5 and PB2 GPIO state and function
+	c 0x13 - PD5 GPIO PWM, if state set to PWM
+	c 0x14 - PB2 GPIO PWM, if state set to PWM
+
+Legend:
+	'*' is necessary
+	' ' will be needed in future versions
+	'c' would be cool to have as early as possible (will likely be used by 0.1 percent of people or less, so might never get implemented otherwise)
+
+0x03 disambiguation:
+
+We don't need to enable all firmware functions by default, for power consumption and firmware responsiveness regulation. Plus, adding enable bits lets us turn off some sections of the firmware main loop if they cause bugs - without reflashing the ATMega (which is tricky on the ZeroPhone).
+
+| 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+| R | R | R | I | I | I | I | I |
+
+0: turn on keypad reading
+1: turn on reading from ADC0
+2: turn on reading from ADC0
+3: turn on vibromotor PWM
+4: turn on keypad backlight PWM
+5: turn on PB2/PB5 GPIO processing
+5: reserved
+5: reserved
+
+0x05 disambiguation:
+
+This is a non-destructive test for whether the main loop runs (has not frozen), as well as a way to benchmark how quickly it is running (so that we can test, say, influence of certain enable bits on keypad reading times). It's a counter that gets incremented each time the main loop makes a cycle, and overflows when reaches 256. 
+
+0x12 disambiguation:
+
+There are two free pins (PB2 and PD5) that a user can access, both of them have a PWM function. So, it'd make sense to expose both GPIO and PWM capabilities of those pins. When DD bit is set (1), the GPIO behaves as output, and will have state of the PORT bit. When DD bit is unset (0), the GPIO behaves as input, and PORT bit will be set to the GPIO state.
+
+| 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+| I | I | I | IO| I | I | I | IO|
+
+0: PD5 PORT
+1: PD5 DD
+2: PD5 PUD
+3: PD5 PWM enable (bits 0-2 ignored if set)
+4: PB2 PORT
+5: PB2 DD
+6: PB2 PUD
+7: PB2 PWM enable (bits 4-6 ignored if set)
+
+Possible additions:
+	Exposing the temperature sensor reading?
+		Will need an enable bit
