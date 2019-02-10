@@ -76,11 +76,6 @@ void keypad_ev_listener_i2c(char key) {
   key_pointer++;
   if (key_pointer == BUFFER_SIZE) key_pointer = 0;
   digitalWrite(int_pin, LOW);
-  #ifdef debug
-    Serial.print(key_pointer);
-    Serial.print(" ");
-    Serial.println(i2c_value);
-  #endif
 }
 
 void processWrite(int len){
@@ -129,4 +124,9 @@ void setup(){
 
 void loop(){
   keypad.getKey();
+  #ifdef debug
+    Serial.print(key_pointer);
+    Serial.print(" ");
+    Serial.println(i2c_pointer);
+  #endif
 }
