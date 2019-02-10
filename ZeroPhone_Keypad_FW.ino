@@ -26,12 +26,11 @@ uint8_t keys[COLS][ROWS] = {
     { 19,     21,       8,      11,    30,        29}
 };
 
-const byte BUFFER_SIZE = 255;
+const byte BUFFER_SIZE = 3*15;
 uint8_t key_buffer[BUFFER_SIZE] = {};
-uint8_t key_pointer = 1;
-uint8_t i2c_pointer = 1;
-
-uint8_t pressed_key;
+uint8_t key_pointer = 1; // pointer to next position in buffer to put the key state value
+uint8_t i2c_pointer = 1; // pointer to next position in buffer to read the key state value from
+// (to then send it over I2C)
 
 byte rowPins[ROWS] = {8, 7, 6, 4, 3, 2}; 
 byte colPins[COLS] = {12, 13, A0, A1, A2}; 
@@ -39,6 +38,7 @@ byte colPins[COLS] = {12, 13, A0, A1, A2};
 Keypad keypad = Keypad( makeKeymap(keys), colPins, rowPins, COLS, ROWS );
 
 void sendKey() {
+  if (i2c_pointer == BUFFER_SIZE) i2c_pointer = 0;
   if (i2c_pointer == key_pointer) {
     Wire.write(0);
     digitalWrite(int_pin, HIGH);
@@ -51,9 +51,13 @@ void sendKey() {
   }
 }
 
-bool buffer_overflow() {
+bool pointer_overflow() {
+  // Tells whether the key pointer is about to overtake i2c pointer.
+  // Used by the key read function to know when to block.
+  // As a result, there's an assumption that the pointer is about to be incremented
+  // (and, if necessary, clamped) after calling this function.
   if (i2c_pointer == 0){
-    return key_pointer == BUFFER_SIZE;
+    return key_pointer == BUFFER_SIZE-1;
   }
   return key_pointer == i2c_pointer - 1;
 }
@@ -65,11 +69,12 @@ void keypad_ev_listener_i2c(char key) {
     return;
   state--;
   uint8_t i2c_value = state << 5 | key_value;
-  if (buffer_overflow()) {    
-    return;
+  while (pointer_overflow()) {
+      delay(1);
   }
   key_buffer[key_pointer] = i2c_value;
   key_pointer++;
+  if (key_pointer == BUFFER_SIZE) key_pointer = 0;
   digitalWrite(int_pin, LOW);
   #ifdef debug
     Serial.print(key_pointer);
