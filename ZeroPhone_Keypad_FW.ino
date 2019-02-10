@@ -1,9 +1,15 @@
 #include <Keypad.h>
 #include <Wire.h>
 
-#define version 0x03
+#define version 0x05
 #define address 0x12
 #define int_pin A3
+#define vibromotor_pin 11
+#define tftbl_pin 10
+#define kpbl_pin 9
+#define usrgp1_pin 5
+
+//#define debug
 
 const byte ROWS = 6; 
 const byte COLS = 5; 
@@ -20,7 +26,11 @@ uint8_t keys[COLS][ROWS] = {
     { 19,     21,       8,      11,    30,        29}
 };
 
-uint8_t pressed_key;
+const byte BUFFER_SIZE = 3*15;
+uint8_t key_buffer[BUFFER_SIZE] = {};
+uint8_t key_pointer = 1; // pointer to next position in buffer to put the key state value
+uint8_t i2c_pointer = 1; // pointer to next position in buffer to read the key state value from
+// (to then send it over I2C)
 
 byte rowPins[ROWS] = {8, 7, 6, 4, 3, 2}; 
 byte colPins[COLS] = {12, 13, A0, A1, A2}; 
@@ -28,25 +38,95 @@ byte colPins[COLS] = {12, 13, A0, A1, A2};
 Keypad keypad = Keypad( makeKeymap(keys), colPins, rowPins, COLS, ROWS );
 
 void sendKey() {
-  Wire.write(pressed_key);
-  pressed_key = 0;
-  digitalWrite(int_pin, HIGH);
+  if (i2c_pointer == BUFFER_SIZE) i2c_pointer = 0;
+  if (i2c_pointer == key_pointer) {
+    Wire.write(0);
+    digitalWrite(int_pin, HIGH);
+    return;
+  }
+  Wire.write(key_buffer[i2c_pointer]);
+  i2c_pointer++;
+  if (i2c_pointer == key_pointer) {
+    digitalWrite(int_pin, HIGH);
+  }
+}
+
+bool pointer_overflow() {
+  // Tells whether the key pointer is about to overtake i2c pointer.
+  // Used by the key read function to know when to block.
+  // As a result, there's an assumption that the pointer is about to be incremented
+  // (and, if necessary, clamped) after calling this function.
+  if (i2c_pointer == 0){
+    return key_pointer == BUFFER_SIZE-1;
+  }
+  return key_pointer == i2c_pointer - 1;
+}
+
+void keypad_ev_listener_i2c(char key) {
+  uint8_t key_value = (uint8_t) key;
+  byte state = keypad.getState();
+  if (state == 0)
+    return;
+  state--;
+  uint8_t i2c_value = state << 5 | key_value;
+  while (pointer_overflow()) {
+      delay(1);
+  }
+  key_buffer[key_pointer] = i2c_value;
+  key_pointer++;
+  if (key_pointer == BUFFER_SIZE) key_pointer = 0;
+  digitalWrite(int_pin, LOW);
+}
+
+void processWrite(int len){
+    // res-res-res-res-gpo-kpbl-tftbl-vib
+    for (int i=0; i<len; i++)
+    {
+      uint8_t data = Wire.read();
+      digitalWrite(vibromotor_pin, bitRead( data, 0 ));
+      analogWrite(tftbl_pin, bitRead( data, 1 ) ? 0 : 500);
+      analogWrite(kpbl_pin, bitRead( data, 2 ) ? 0 : 500);
+      digitalWrite(usrgp1_pin, bitRead( data, 3 ));
+    }
 }
 
 void setup(){
-  Serial.begin(115200);
-  Serial.write('a'); //TXD testing
+  #ifdef debug
+    Serial.begin(115200);
+    Serial.write('a'); //TXD testing
+  #endif
+  // Interrupt pin
   pinMode(int_pin, OUTPUT);
   digitalWrite(int_pin, HIGH);
+  // Vibromotor pin
+  pinMode(vibromotor_pin, OUTPUT);
+  digitalWrite(vibromotor_pin, LOW);
+  // TFT backlight pin
+  pinMode(tftbl_pin, OUTPUT);
+  digitalWrite(tftbl_pin, LOW);
+  // Keypad backlight pin
+  pinMode(kpbl_pin, OUTPUT);
+  digitalWrite(kpbl_pin, LOW);
+  // User-controlled GPIO (in this FW version, it's OUT-only)
+  pinMode(usrgp1_pin, OUTPUT);
+  digitalWrite(usrgp1_pin, LOW);
+  // I2C setup
   Wire.begin(address); 
   Wire.onRequest(sendKey);
-  //Wire.onReceive(sendKey);
+  Wire.onReceive(processWrite);
+  // Enable the vibromotor for a short while on bootup
+  digitalWrite(vibromotor_pin, HIGH);
+  delay(300);
+  digitalWrite(vibromotor_pin, LOW);
+  keypad.addEventListener(keypad_ev_listener_i2c);
+  keypad.setHoldTime(500);
 }
+
 void loop(){
-  uint8_t key = keypad.getKey();
-  if (key){
-    pressed_key = key;
-    Serial.println(key);
-    digitalWrite(int_pin, LOW);
-  }
+  keypad.getKey();
+  #ifdef debug
+    Serial.print(key_pointer);
+    Serial.print(" ");
+    Serial.println(i2c_pointer);
+  #endif
 }
