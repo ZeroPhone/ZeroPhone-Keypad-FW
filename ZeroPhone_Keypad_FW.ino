@@ -5,6 +5,9 @@
 #define address 0x12
 #define int_pin A3
 #define vibromotor_pin 11
+#define tftbl_pin 10
+#define kpbl_pin 9
+#define usrgp1_pin 5
 
 //#define debug
 
@@ -75,23 +78,50 @@ void keypad_ev_listener_i2c(char key) {
   #endif
 }
 
+void processWrite(int len){
+    // res-res-res-res-gpo-kpbl-tftbl-vib
+    for (int i=0; i<len; i++)
+    {
+      uint8_t data = Wire.read();
+      digitalWrite(vibromotor_pin, bitRead( data, 0 ));
+      analogWrite(tftbl_pin, bitRead( data, 1 ) ? 0 : 500);
+      analogWrite(kpbl_pin, bitRead( data, 2 ) ? 0 : 500);
+      digitalWrite(usrgp1_pin, bitRead( data, 3 ));
+    }
+}
+
 void setup(){
   #ifdef debug
     Serial.begin(115200);
     Serial.write('a'); //TXD testing
   #endif
+  // Interrupt pin
   pinMode(int_pin, OUTPUT);
-  pinMode(vibromotor_pin, OUTPUT);
   digitalWrite(int_pin, HIGH);
+  // Vibromotor pin
+  pinMode(vibromotor_pin, OUTPUT);
+  digitalWrite(vibromotor_pin, LOW);
+  // TFT backlight pin
+  pinMode(tftbl_pin, OUTPUT);
+  digitalWrite(tftbl_pin, LOW);
+  // Keypad backlight pin
+  pinMode(kpbl_pin, OUTPUT);
+  digitalWrite(kpbl_pin, LOW);
+  // User-controlled GPIO (in this FW version, it's OUT-only)
+  pinMode(usrgp1_pin, OUTPUT);
+  digitalWrite(usrgp1_pin, LOW);
+  // I2C setup
+  Wire.begin(address); 
+  Wire.onRequest(sendKey);
+  Wire.onReceive(processWrite);
+  // Enable the vibromotor for a short while on bootup
   digitalWrite(vibromotor_pin, HIGH);
-  delay(500);
+  delay(300);
   digitalWrite(vibromotor_pin, LOW);
   keypad.addEventListener(keypad_ev_listener_i2c);
   keypad.setHoldTime(500);
-  Wire.begin(address); 
-  Wire.onRequest(sendKey);
-  //Wire.onReceive(getData);
 }
+
 void loop(){
   keypad.getKey();
 }
